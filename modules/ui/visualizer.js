@@ -114,8 +114,7 @@ export function visualizeMessage(message) {
 	let crcBitCount;
 	if (isFd) {
 		stuffablePart.push(...generateRandomBits(4).map((b, i) => ({ value: b, label: `SC${3 - i}`, type: 'CRC' })));
-		if (isExtended) crcBitCount = (dlcVal <= 10) ? 21 : 25;
-		else crcBitCount = (dlcVal <= 10) ? 17 : 21;
+		crcBitCount = (dlcVal <= 10) ? 17 : 21;
 	} else {
 		crcBitCount = 15;
 	}
