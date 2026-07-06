@@ -14,17 +14,21 @@ function calculateBusLoad() {
 		return;
 	}
 	const baudRate = parseFloat(elements.baudRate.value) || CONSTANTS.DEFAULT_BAUD_RATE;
-	let totalMinBitsPerSecond = 0;
-	let totalMaxBitsPerSecond = 0;
+	let totalMinFrameSecondsPerSecond = 0;
+	let totalMaxFrameSecondsPerSecond = 0;
 
 	canMessages.forEach(message => {
-		const { min, max } = getFrameLength(message.frameType, message.dataLength);
-		totalMinBitsPerSecond += min * message.frequency * message.frameCount;
-		totalMaxBitsPerSecond += max * message.frequency * message.frameCount;
+		const { nominalMin, nominalMax, dataMin, dataMax } = getFrameLength(message.frameType, message.dataLength);
+		const isFd = message.frameType.startsWith('FDCAN');
+		const nominalBaudRate = isFd ? CONSTANTS.FDCAN_NOMINAL_BAUD_RATE : baudRate;
+		const minFrameSeconds = (nominalMin / nominalBaudRate) + (dataMin / baudRate);
+		const maxFrameSeconds = (nominalMax / nominalBaudRate) + (dataMax / baudRate);
+		totalMinFrameSecondsPerSecond += minFrameSeconds * message.frequency * message.frameCount;
+		totalMaxFrameSecondsPerSecond += maxFrameSeconds * message.frequency * message.frameCount;
 	});
 
-	const minBusLoad = (totalMinBitsPerSecond / baudRate) * 100;
-	const maxBusLoad = (totalMaxBitsPerSecond / baudRate) * 100;
+	const minBusLoad = totalMinFrameSecondsPerSecond * 100;
+	const maxBusLoad = totalMaxFrameSecondsPerSecond * 100;
 	const avgBusLoad = (minBusLoad + maxBusLoad) / 2;
 
 	updateLoadDisplay(minBusLoad, avgBusLoad, maxBusLoad);
@@ -179,6 +183,10 @@ function validateInputData() {
 	}
 	const hasFdcan = canMessages.some(m => m.frameType.startsWith('FDCAN'));
 	const hasClassicCan = canMessages.some(m => !m.frameType.startsWith('FDCAN'));
+	if (hasFdcan && baudRate < CONSTANTS.FDCAN_NOMINAL_BAUD_RATE) {
+		showError(`FDCAN 数据段波特率不能低于 ${CONSTANTS.FDCAN_NOMINAL_BAUD_RATE}`);
+		return false;
+	}
 	if (hasFdcan && hasClassicCan) {
 		showError("不允许混合使用经典 CAN 和 FD CAN");
 		return false;

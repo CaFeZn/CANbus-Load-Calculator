@@ -2,7 +2,6 @@
 
 import { DLC_TO_LENGTH } from './config.js';
 
-// --- Unified Frame Length Calculation ---
 export function getFrameLength(frameType, dataLength) {
 	let stuffableOverhead = 0;
 	const fixedBits = 1 + 1 + 2 + 7 + 3; // SOF, CRC Del, ACK(Slot+Del), EOF, IFS
@@ -21,16 +20,22 @@ export function getFrameLength(frameType, dataLength) {
 			if (dlcVal === -1) dlcVal = 15;
 			dataBits = DLC_TO_LENGTH[dlcVal] * 8;
 			const crcBitCount = (dlcVal <= 10) ? 17 : 21;
-			stuffableOverhead = 11 + 1 + 1 + 1 + 1 + 1 + 1 + 4 + 4 + crcBitCount; // ID, RRS, IDE, FDF, r, BRS, ESI, DLC, StuffCount, CRC
-			break;
+			const nominalStuffableBits = 1 + 11 + 1 + 1 + 1 + 1; // SOF, ID, RRS, IDE, FDF, r
+			const nominalFixedBits = 2 + 7 + 3; // ACK(Slot+Del), EOF, IFS
+			const dataStuffableBits = 1 + 1 + 4 + dataBits + 4 + crcBitCount; // BRS, ESI, DLC, Data, StuffCount, CRC
+			const dataFixedBits = 1; // CRC Del
+			return getSplitFrameLength(nominalStuffableBits, nominalFixedBits, dataStuffableBits, dataFixedBits);
 		}
 		case 'FDCAN_EXTENDED': {
 			dlcVal = DLC_TO_LENGTH.findIndex(len => len >= dataLength);
 			if (dlcVal === -1) dlcVal = 15;
 			dataBits = DLC_TO_LENGTH[dlcVal] * 8;
-			const crcBitCount = (dlcVal <= 10) ? 21 : 25;
-			stuffableOverhead = 11 + 1 + 1 + 18 + 1 + 1 + 1 + 1 + 4 + 4 + crcBitCount; // BaseID, SRR, IDE, ExtID, FDF, r, BRS, ESI, DLC, StuffCount, CRC
-			break;
+			const crcBitCount = (dlcVal <= 10) ? 17 : 21;
+			const nominalStuffableBits = 1 + 11 + 1 + 1 + 18 + 1 + 1; // SOF, BaseID, SRR, IDE, ExtID, FDF, r
+			const nominalFixedBits = 2 + 7 + 3; // ACK(Slot+Del), EOF, IFS
+			const dataStuffableBits = 1 + 1 + 4 + dataBits + 4 + crcBitCount; // BRS, ESI, DLC, Data, StuffCount, CRC
+			const dataFixedBits = 1; // CRC Del
+			return getSplitFrameLength(nominalStuffableBits, nominalFixedBits, dataStuffableBits, dataFixedBits);
 		}
 		default:
 			throw new Error(`Unsupported frame type: ${String(frameType)}`);
@@ -41,5 +46,27 @@ export function getFrameLength(frameType, dataLength) {
 	const maxStuffing = Math.floor(stuffableBits / 5);
 	const maxLength = minLength + maxStuffing;
 
-	return { min: minLength, max: maxLength };
+	return {
+		min: minLength,
+		max: maxLength,
+		nominalMin: minLength,
+		nominalMax: maxLength,
+		dataMin: 0,
+		dataMax: 0
+	};
+}
+
+function getSplitFrameLength(nominalStuffableBits, nominalFixedBits, dataStuffableBits, dataFixedBits) {
+	const nominalMin = nominalStuffableBits + nominalFixedBits;
+	const nominalMax = nominalMin + Math.floor(nominalStuffableBits / 5);
+	const dataMin = dataStuffableBits + dataFixedBits;
+	const dataMax = dataMin + Math.floor(dataStuffableBits / 5);
+	return {
+		min: nominalMin + dataMin,
+		max: nominalMax + dataMax,
+		nominalMin,
+		nominalMax,
+		dataMin,
+		dataMax
+	};
 }
