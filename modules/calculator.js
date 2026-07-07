@@ -20,9 +20,9 @@ export function getFrameLength(frameType, dataLength) {
 			if (dlcVal === -1) dlcVal = 15;
 			dataBits = DLC_TO_LENGTH[dlcVal] * 8;
 			const crcBitCount = (dlcVal <= 10) ? 17 : 21;
-			const nominalStuffableBits = 1 + 11 + 1 + 1 + 1 + 1; // SOF, ID, RRS, IDE, FDF, r
+			const nominalStuffableBits = 1 + 11 + 1 + 1 + 1 + 1 + 1; // SOF, ID, RRS, IDE, FDF, r, BRS
 			const nominalFixedBits = 2 + 7 + 3; // ACK(Slot+Del), EOF, IFS
-			const dataStuffableBits = 1 + 1 + 4 + dataBits + 4 + crcBitCount; // BRS, ESI, DLC, Data, StuffCount, CRC
+			const dataStuffableBits = 1 + 4 + dataBits + 4 + crcBitCount; // ESI, DLC, Data, StuffCount, CRC
 			const dataFixedBits = 1; // CRC Del
 			return getSplitFrameLength(nominalStuffableBits, nominalFixedBits, dataStuffableBits, dataFixedBits);
 		}
@@ -31,9 +31,9 @@ export function getFrameLength(frameType, dataLength) {
 			if (dlcVal === -1) dlcVal = 15;
 			dataBits = DLC_TO_LENGTH[dlcVal] * 8;
 			const crcBitCount = (dlcVal <= 10) ? 17 : 21;
-			const nominalStuffableBits = 1 + 11 + 1 + 1 + 18 + 1 + 1; // SOF, BaseID, SRR, IDE, ExtID, FDF, r
+			const nominalStuffableBits = 1 + 11 + 1 + 1 + 18 + 1 + 1 + 1; // SOF, BaseID, SRR, IDE, ExtID, FDF, r, BRS
 			const nominalFixedBits = 2 + 7 + 3; // ACK(Slot+Del), EOF, IFS
-			const dataStuffableBits = 1 + 1 + 4 + dataBits + 4 + crcBitCount; // BRS, ESI, DLC, Data, StuffCount, CRC
+			const dataStuffableBits = 1 + 4 + dataBits + 4 + crcBitCount; // ESI, DLC, Data, StuffCount, CRC
 			const dataFixedBits = 1; // CRC Del
 			return getSplitFrameLength(nominalStuffableBits, nominalFixedBits, dataStuffableBits, dataFixedBits);
 		}
@@ -58,9 +58,13 @@ export function getFrameLength(frameType, dataLength) {
 
 function getSplitFrameLength(nominalStuffableBits, nominalFixedBits, dataStuffableBits, dataFixedBits) {
 	const nominalMin = nominalStuffableBits + nominalFixedBits;
-	const nominalMax = nominalMin + Math.floor(nominalStuffableBits / 5);
+	const nominalStuffing = Math.floor(nominalStuffableBits / 5);
+	const dataStuffing = Math.floor(dataStuffableBits / 5);
+	const totalStuffing = Math.floor((nominalStuffableBits + dataStuffableBits) / 5);
+	const crossPhaseStuffing = totalStuffing - nominalStuffing - dataStuffing;
+	const nominalMax = nominalMin + nominalStuffing;
 	const dataMin = dataStuffableBits + dataFixedBits;
-	const dataMax = dataMin + Math.floor(dataStuffableBits / 5);
+	const dataMax = dataMin + dataStuffing + crossPhaseStuffing;
 	return {
 		min: nominalMin + dataMin,
 		max: nominalMax + dataMax,
