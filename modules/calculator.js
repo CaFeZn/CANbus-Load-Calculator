@@ -12,8 +12,16 @@ export function getFrameLength(frameType, dataLength) {
 		case 'CAN_STANDARD':
 			stuffableOverhead = 11 + 1 + 1 + 1 + 4 + 15; // ID, RTR, IDE, r0, DLC, CRC
 			break;
+		case 'CAN_STANDARD_REMOTE':
+			stuffableOverhead = 11 + 1 + 1 + 1 + 4 + 15; // ID, RTR, IDE, r0, DLC, CRC
+			dataBits = 0;
+			break;
 		case 'CAN_EXTENDED':
 			stuffableOverhead = 11 + 1 + 1 + 18 + 1 + 1 + 1 + 4 + 15; // BaseID, SRR, IDE, ExtID, RTR, r1, r0, DLC, CRC
+			break;
+		case 'CAN_EXTENDED_REMOTE':
+			stuffableOverhead = 11 + 1 + 1 + 18 + 1 + 1 + 1 + 4 + 15; // BaseID, SRR, IDE, ExtID, RTR, r1, r0, DLC, CRC
+			dataBits = 0;
 			break;
 		case 'FDCAN_STANDARD': {
 			dlcVal = DLC_TO_LENGTH.findIndex(len => len >= dataLength);

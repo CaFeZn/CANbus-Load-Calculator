@@ -1,6 +1,6 @@
 // main.js
 
-import { CONSTANTS, defaultMessages } from './modules/config.js';
+import { CONSTANTS, FRAME_TYPES, defaultMessages } from './modules/config.js';
 import { elements } from './modules/ui/elements.js';
 import { getFrameLength } from './modules/calculator.js';
 import { visualizeMessage } from './modules/ui/visualizer.js';
@@ -71,15 +71,19 @@ function renderMessageTable() {
 	canMessages.forEach((message, index) => {
 		const row = document.createElement("tr");
 		const isFd = message.frameType.startsWith('FDCAN');
+		const isRemote = message.frameType.endsWith('REMOTE');
 		const maxDataLength = isFd ? CONSTANTS.MAX_FDCAN_DATA_LENGTH : CONSTANTS.MAX_DATA_LENGTH;
+		const dataLengthDisabled = isRemote ? "disabled" : "";
 		row.innerHTML = `
 			<td><input type="number" class="frequency" value="${message.frequency}" min="0" step="1" aria-label="消息频率（Hz）"></td>
-			<td><input type="number" class="dataLength" value="${message.dataLength}" min="0" max="${maxDataLength}" step="1" aria-label="数据长度（字节）"></td>
+			<td><input type="number" class="dataLength" value="${isRemote ? 0 : message.dataLength}" min="0" max="${maxDataLength}" step="1" ${dataLengthDisabled} aria-label="数据长度（字节）"></td>
 			<td><input type="number" class="frameCount" value="${message.frameCount}" min="1" step="1" aria-label="每个周期发送的帧数"></td>
 			<td>
 				<select class="frameType" aria-label="选择 CAN 帧类型">
 					<option value="CAN_STANDARD" ${message.frameType === "CAN_STANDARD" ? "selected" : ""}>CAN 标准帧</option>
 					<option value="CAN_EXTENDED" ${message.frameType === "CAN_EXTENDED" ? "selected" : ""}>CAN 扩展帧</option>
+					<option value="CAN_STANDARD_REMOTE" ${message.frameType === "CAN_STANDARD_REMOTE" ? "selected" : ""}>CAN 标准远程帧</option>
+					<option value="CAN_EXTENDED_REMOTE" ${message.frameType === "CAN_EXTENDED_REMOTE" ? "selected" : ""}>CAN 扩展远程帧</option>
 					<option value="FDCAN_STANDARD" ${message.frameType === "FDCAN_STANDARD" ? "selected" : ""}>CAN FD 标准帧</option>
 					<option value="FDCAN_EXTENDED" ${message.frameType === "FDCAN_EXTENDED" ? "selected" : ""}>CAN FD 扩展帧</option>
 				</select>
@@ -113,7 +117,15 @@ function updateMessage(index, row) {
 	const frameType = frameTypeSelect.value;
 	let dataLength = parseFloat(dataLengthInput.value) || 0;
 	const isFd = frameType.startsWith('FDCAN');
+	const isRemote = frameType.endsWith('REMOTE');
 	const maxDataLength = isFd ? CONSTANTS.MAX_FDCAN_DATA_LENGTH : CONSTANTS.MAX_DATA_LENGTH;
+	if (isRemote) {
+		dataLength = 0;
+		dataLengthInput.value = 0;
+		dataLengthInput.disabled = true;
+	} else {
+		dataLengthInput.disabled = false;
+	}
 	if (dataLength > maxDataLength) {
 		dataLength = maxDataLength;
 		dataLengthInput.value = maxDataLength;
@@ -193,7 +205,16 @@ function validateInputData() {
 	}
 	for (const message of canMessages) {
 		const isFd = message.frameType.startsWith('FDCAN');
+		const isRemote = message.frameType.endsWith('REMOTE');
 		const maxLen = isFd ? CONSTANTS.MAX_FDCAN_DATA_LENGTH : CONSTANTS.MAX_DATA_LENGTH;
+		if (!FRAME_TYPES.includes(message.frameType)) {
+			showError(`不支持的 CAN 帧类型: ${message.frameType}`);
+			return false;
+		}
+		if (isRemote && message.dataLength !== 0) {
+			showError("远程帧数据长度必须为 0");
+			return false;
+		}
 		if (message.dataLength > maxLen) {
 			showError(`数据长度超出 ${message.frameType} 上限 (${maxLen}字节)`);
 			return false;
@@ -225,7 +246,8 @@ function isValidSavedMessagesArray(messages) {
 	return messages.every(msg =>
 		msg &&
 		typeof msg === 'object' &&
-		typeof msg.frameType === 'string'
+		typeof msg.frameType === 'string' &&
+		FRAME_TYPES.includes(msg.frameType)
 	);
 }
 

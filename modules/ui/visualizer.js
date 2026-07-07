@@ -64,7 +64,8 @@ export function visualizeMessage(message) {
 
 	const { frameType, dataLength } = message;
 	const isFd = frameType.startsWith('FDCAN');
-	const isExtended = frameType.endsWith('EXTENDED');
+	const isExtended = frameType.includes('EXTENDED');
+	const isRemote = frameType.endsWith('REMOTE');
 
 	const baseIdBits = generateRandomBits(11);
 	baseIdBits.forEach((b, i) => stuffablePart.push({ value: b, label: `ID${10 - i}`, type: 'ARBITRATION' }));
@@ -76,7 +77,7 @@ export function visualizeMessage(message) {
 		extIdBits.forEach((b, i) => stuffablePart.push({ value: b, label: `ExtID${17 - i}`, type: 'ARBITRATION' }));
 	} else {
 		const rtrLabel = isFd ? 'RRS' : 'RTR';
-		const rtrBit = isFd ? '1' : '0';
+		const rtrBit = isFd || isRemote ? '1' : '0';
 		stuffablePart.push({ value: rtrBit, label: rtrLabel, type: 'ARBITRATION' });
 		stuffablePart.push({ value: '0', label: 'IDE', type: 'ARBITRATION' });
 	}
@@ -91,7 +92,7 @@ export function visualizeMessage(message) {
 		if (dlcVal === -1) dlcVal = 15;
 	} else {
 		if (isExtended) {
-			stuffablePart.push({ value: '0', label: 'RTR', type: 'CONTROL' });
+			stuffablePart.push({ value: isRemote ? '1' : '0', label: 'RTR', type: 'CONTROL' });
 			stuffablePart.push({ value: '0', label: 'r1', type: 'CONTROL' });
 			stuffablePart.push({ value: '0', label: 'r0', type: 'CONTROL' });
 		} else {
@@ -101,7 +102,7 @@ export function visualizeMessage(message) {
 	const dlcBits = dlcVal.toString(2).padStart(4, '0').split('');
 	dlcBits.forEach((b, i) => stuffablePart.push({ value: b, label: `DLC${3 - i}`, type: 'CONTROL' }));
 
-	const actualDataLength = isFd ? DLC_TO_LENGTH[dlcVal] : dataLength;
+	const actualDataLength = isRemote ? 0 : (isFd ? DLC_TO_LENGTH[dlcVal] : dataLength);
 	const dataBits = generateRandomBits(actualDataLength * 8);
 	dataBits.forEach((b, i) => {
 		const byteIndex = Math.floor(i / 8);
