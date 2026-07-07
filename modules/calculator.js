@@ -39,7 +39,7 @@ export function getFrameLength(frameType, dataLength) {
 			if (dlcVal === -1) dlcVal = 15;
 			dataBits = DLC_TO_LENGTH[dlcVal] * 8;
 			const crcBitCount = (dlcVal <= 10) ? 17 : 21;
-			const nominalStuffableBits = 1 + 11 + 1 + 1 + 18 + 1 + 1 + 1; // SOF, BaseID, SRR, IDE, ExtID, FDF, r, BRS
+			const nominalStuffableBits = 1 + 11 + 1 + 1 + 18 + 1 + 1 + 1 + 1; // SOF, BaseID, SRR, IDE, ExtID, RRS, FDF, r, BRS
 			const nominalFixedBits = 2 + 7 + 3; // ACK(Slot+Del), EOF, IFS
 			const dataStuffableBits = 1 + 4 + dataBits + 4 + crcBitCount; // ESI, DLC, Data, StuffCount, CRC
 			const dataFixedBits = 1; // CRC Del

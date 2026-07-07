@@ -75,9 +75,12 @@ export function visualizeMessage(message) {
 		stuffablePart.push({ value: '1', label: 'IDE', type: 'ARBITRATION' });
 		const extIdBits = generateRandomBits(18);
 		extIdBits.forEach((b, i) => stuffablePart.push({ value: b, label: `ExtID${17 - i}`, type: 'ARBITRATION' }));
+		if (isFd) {
+			stuffablePart.push({ value: '0', label: 'RRS', type: 'CONTROL' });
+		}
 	} else {
 		const rtrLabel = isFd ? 'RRS' : 'RTR';
-		const rtrBit = isFd || isRemote ? '1' : '0';
+		const rtrBit = (isFd || !isRemote) ? '0' : '1';
 		stuffablePart.push({ value: rtrBit, label: rtrLabel, type: 'ARBITRATION' });
 		stuffablePart.push({ value: '0', label: 'IDE', type: 'ARBITRATION' });
 	}
