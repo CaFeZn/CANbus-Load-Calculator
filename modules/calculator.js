@@ -51,7 +51,8 @@ export function getFrameLength(frameType, dataLength) {
 
 	const stuffableBits = stuffableOverhead + dataBits;
 	const minLength = stuffableBits + fixedBits;
-	const maxStuffing = Math.floor(stuffableBits / 5);
+	// Worst-case upper bound for classic CAN bit stuffing from SOF through CRC.
+	const maxStuffing = Math.floor(stuffableBits / 4);
 	const maxLength = minLength + maxStuffing;
 
 	return {
