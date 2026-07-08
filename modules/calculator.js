@@ -28,10 +28,11 @@ export function getFrameLength(frameType, dataLength) {
 			if (dlcVal === -1) dlcVal = 15;
 			dataBits = DLC_TO_LENGTH[dlcVal] * 8;
 			const crcBitCount = (dlcVal <= 10) ? 17 : 21;
+			const crcFixedStuffBits = getFdCrcFixedStuffBits(crcBitCount);
 			const nominalStuffableBits = 1 + 11 + 1 + 1 + 1 + 1 + 1; // SOF, ID, RRS, IDE, FDF, r, BRS
 			const nominalFixedBits = 2 + 7 + 3; // ACK(Slot+Del), EOF, IFS
-			const dataStuffableBits = 1 + 4 + dataBits + 4 + crcBitCount; // ESI, DLC, Data, StuffCount, CRC
-			const dataFixedBits = 1; // CRC Del
+			const dataStuffableBits = 1 + 4 + dataBits; // ESI, DLC, Data
+			const dataFixedBits = 4 + crcFixedStuffBits + crcBitCount + 1; // SBC, CRC fixed stuff bits, CRC, CRC Del
 			return getSplitFrameLength(nominalStuffableBits, nominalFixedBits, dataStuffableBits, dataFixedBits);
 		}
 		case 'FDCAN_EXTENDED': {
@@ -39,10 +40,11 @@ export function getFrameLength(frameType, dataLength) {
 			if (dlcVal === -1) dlcVal = 15;
 			dataBits = DLC_TO_LENGTH[dlcVal] * 8;
 			const crcBitCount = (dlcVal <= 10) ? 17 : 21;
+			const crcFixedStuffBits = getFdCrcFixedStuffBits(crcBitCount);
 			const nominalStuffableBits = 1 + 11 + 1 + 1 + 18 + 1 + 1 + 1 + 1; // SOF, BaseID, SRR, IDE, ExtID, RRS, FDF, r, BRS
 			const nominalFixedBits = 2 + 7 + 3; // ACK(Slot+Del), EOF, IFS
-			const dataStuffableBits = 1 + 4 + dataBits + 4 + crcBitCount; // ESI, DLC, Data, StuffCount, CRC
-			const dataFixedBits = 1; // CRC Del
+			const dataStuffableBits = 1 + 4 + dataBits; // ESI, DLC, Data
+			const dataFixedBits = 4 + crcFixedStuffBits + crcBitCount + 1; // SBC, CRC fixed stuff bits, CRC, CRC Del
 			return getSplitFrameLength(nominalStuffableBits, nominalFixedBits, dataStuffableBits, dataFixedBits);
 		}
 		default:
@@ -63,6 +65,10 @@ export function getFrameLength(frameType, dataLength) {
 		dataMin: 0,
 		dataMax: 0
 	};
+}
+
+function getFdCrcFixedStuffBits(crcBitCount) {
+	return Math.floor(crcBitCount / 4) + 1;
 }
 
 function getSplitFrameLength(nominalStuffableBits, nominalFixedBits, dataStuffableBits, dataFixedBits) {

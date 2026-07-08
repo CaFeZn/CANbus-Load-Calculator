@@ -51,6 +51,10 @@ function applyBitStuffing(bitObjects) {
 	return stuffed;
 }
 
+function getOppositeBit(bitValue) {
+	return bitValue === '1' ? '0' : '1';
+}
+
 export function visualizeMessage(message) {
 	const container = elements.visualizationContainer;
 	container.innerHTML = "";
@@ -59,6 +63,7 @@ export function visualizeMessage(message) {
 
 	let finalBitStream = [];
 	let stuffablePart = [];
+	let fixedCrcPart = [];
 
 	finalBitStream.push({ value: '0', label: 'SOF', type: 'SOF' });
 
@@ -117,14 +122,28 @@ export function visualizeMessage(message) {
 
 	let crcBitCount;
 	if (isFd) {
-		stuffablePart.push(...generateRandomBits(4).map((b, i) => ({ value: b, label: `SC${3 - i}`, type: 'CRC' })));
+		const stuffCountBits = generateRandomBits(4).map((b, i) => ({ value: b, label: `SBC${3 - i}`, type: 'CRC' }));
+		fixedCrcPart.push(...stuffCountBits);
+		let previousCrcBit = stuffCountBits[stuffCountBits.length - 1].value;
+		fixedCrcPart.push({ value: getOppositeBit(previousCrcBit), label: 'FSB', type: 'CRC' });
 		crcBitCount = (dlcVal <= 10) ? 17 : 21;
+		const crcBits = generateRandomBits(crcBitCount);
+		crcBits.forEach((b, i) => {
+			fixedCrcPart.push({ value: b, label: `CRC${crcBitCount - 1 - i}`, type: 'CRC' });
+			previousCrcBit = b;
+			if ((i + 1) % 4 === 0) {
+				const fixedStuffBit = getOppositeBit(previousCrcBit);
+				fixedCrcPart.push({ value: fixedStuffBit, label: 'FSB', type: 'CRC' });
+				previousCrcBit = fixedStuffBit;
+			}
+		});
 	} else {
 		crcBitCount = 15;
+		stuffablePart.push(...generateRandomBits(crcBitCount).map((b, i) => ({ value: b, label: `CRC${crcBitCount - 1 - i}`, type: 'CRC' })));
 	}
-	stuffablePart.push(...generateRandomBits(crcBitCount).map((b, i) => ({ value: b, label: `CRC${crcBitCount - 1 - i}`, type: 'CRC' })));
 
 	finalBitStream.push(...applyBitStuffing(stuffablePart));
+	finalBitStream.push(...fixedCrcPart);
 
 	finalBitStream.push({ value: '1', label: 'Del', type: 'CRC' });
 	finalBitStream.push({ value: '0', label: 'Slot', type: 'ACK' });
